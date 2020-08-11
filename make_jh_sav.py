@@ -49,16 +49,16 @@ def get_zpstd(a,vec1,uplim,off1,off2,off3):
 #
 # FUNCTION that uses astropy.coordinates to match the two catalgoues
 #
-def cat_match(c1,c2,max_sep):
+def cat_match(c1,c2,max_sep,colra1,colra2,coldec1,coldec2):
 
-	cat1 = SkyCoord(ra=c1['ALPHA_J2000']*u.degree, dec=c1['DELTA_J2000']*u.degree)
-	cat2 = SkyCoord(ra=c2['ALPHA_J2000']*u.degree, dec=c2['DELTA_J2000']*u.degree)
+	cat1 = SkyCoord(ra=c1[colra1]*u.degree, dec=c1[coldec1]*u.degree)
+	cat2 = SkyCoord(ra=c2[colra2]*u.degree, dec=c2[coldec2]*u.degree)
 	idx, d2d, d3d = cat1.match_to_catalog_sky(cat2)
 	sep_constraint = d2d < max_sep
 	cat1_matches = c1[sep_constraint]
 	cat2_matches = c2[idx[sep_constraint]]
 
-	return cat1_matches,cat2_matches
+	return cat1_matches,cat2_matches,sep_constraint,idx[sep_constraint]
 
 # 
 # FUNCTION that calculates photometric table columns and saves table
@@ -106,7 +106,7 @@ def main():
 	jcat = j[jgood]
 	hcat = h[hgood]
 	# Crossmatch J and H catalogues: here the IDL code uses kna_match_cats - could I make use of astropy instead?
-	hm,jm = cat_match(hcat,jcat,1.0*u.arcsec)	
+	hm,jm,indh,indj = cat_match(hcat,jcat,1.0*u.arcsec,'ALPHA_J2000','DELTA_J2000','ALPHA_J2000','DELTA_J2000')	
 	print(len(hcat),' sources in 1')
 	print(len(jcat),' sources in 2')
 	print(len(hm),' sources matched')
