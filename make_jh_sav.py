@@ -49,16 +49,19 @@ def get_zpstd(a,vec1,uplim,off1,off2,off3):
 #
 # FUNCTION that uses astropy.coordinates to match the two catalgoues
 #
-def cat_match(c1,c2,max_sep,colra1,coldec1,colra2,coldec2):
+def cat_match(c1,c2,max_sep,colra1,coldec1,colra2,coldec2,CONVERT=True):
 
-	cat1 = SkyCoord(ra=c1[colra1]*u.degree, dec=c1[coldec1]*u.degree)
+	if CONVERT:
+		cat1 = SkyCoord(ra=c1[colra1]*u.degree, dec=c1[coldec1]*u.degree)
+	else:
+		cat1 = SkyCoord(ra=c1[colra1],dec=c1[coldec1])
 	cat2 = SkyCoord(ra=c2[colra2]*u.degree, dec=c2[coldec2]*u.degree)
 	idx, d2d, d3d = cat1.match_to_catalog_sky(cat2)
-	sep_constraint = d2d < max_sep
+	sep_constraint = np.where(d2d < max_sep)
 	cat1_matches = c1[sep_constraint]
 	cat2_matches = c2[idx[sep_constraint]]
 
-	return cat1_matches,cat2_matches,sep_constraint,idx[sep_constraint]
+	return cat1_matches,cat2_matches,sep_constraint[0],idx[sep_constraint]
 
 # 
 # FUNCTION that calculates photometric table columns and saves table
