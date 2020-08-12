@@ -49,7 +49,7 @@ def get_zpstd(a,vec1,uplim,off1,off2,off3):
 #
 # FUNCTION that uses astropy.coordinates to match the two catalgoues
 #
-def cat_match(c1,c2,max_sep,colra1,colra2,coldec1,coldec2):
+def cat_match(c1,c2,max_sep,colra1,coldec1,colra2,coldec2):
 
 	cat1 = SkyCoord(ra=c1[colra1]*u.degree, dec=c1[coldec1]*u.degree)
 	cat2 = SkyCoord(ra=c2[colra2]*u.degree, dec=c2[coldec2]*u.degree)
@@ -117,5 +117,5 @@ def main():
 
 	return 
 
-main()
+#main()
 
