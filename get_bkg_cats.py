@@ -173,17 +173,51 @@ def get_w(bands):
 	njh = len(bands['rd'])
 	nstd = len(gstdphot_rows)
 
-	a = np.asarray([np.nan for i in range(njh)])
-	photest = {'west':a,'weste':a,'jest':a,'jeste':a,'hest':a,'heste':a,'wcest':a,'wceste':a,'avest':a}
+	photest = {'west':[0.0 for i in range(njh)],'weste':[0.0 for i in range(njh)],'jest':[0.0 for i in range(njh)],'jeste':[0.0 for i in range(njh)],'hest':[0.0 for i in range(njh)],'heste':[0.0 for i in range(njh)],'wcest':[0.0 for i in range(njh)],'wceste':[0.0 for i in range(njh)],'avest':[0.0 for i in range(njh)]}
 	norm = [0 for i in range(nstd)]
+	west = []
 
-	for i in range(njh):
+	#for i in range(njh):
+	for i in range(100):
 		if sum(np.isfinite(wobsphot[6:,i])) >= 1:
+			print(i)
 			# Normalise to J H K
-			tab = np.asarray([[a for j in range(nstd)] for a in wobsphot[0:5,i]])
-			norm = np.nanmean(tab-gstdphot[2:7],axis=0)
-			normphot = 
+			tab1 = np.asarray([[a for j in range(nstd)] for a in wobsphot[0:5,i]])
+			norm = np.nanmean(tab1-gstdphot[2:7],axis=0)
+			tab2 = np.asarray([[a for j in range(nfilt)] for a in norm])
+			tab2_rows = list([x for x in y if x is not None] for y in zip_longest(*tab2))
+			normphot  = gstdphot + np.asarray(tab2_rows)
+
 			# Simple MCMC to get expected W
+			temperrphot = np.choose(wobsphote[:,i] < 0.02, (wobsphote[:,i], 0.02))
+			nsims = 20
+			temp_w,temp_wc,temp_av = [],[],[]
+			for k in range(nsims):
+				tempophot = wobsphot[:,i] + np.random.normal(size=nfilt-2)*temperrphot
+				#print(normphot[0])
+				tab1 = np.asarray([[a for j in range(nstd)] for a in tempophot])
+				tab2 = np.asarray([[a for j in range(nstd)] for a in temperrphot])
+				offset = (normphot[2:,:] - tab1)/tab2 #	MIGHT NEED TO COME BACK TO THIS!
+				bestsub = np.argmin(np.nansum(offset**2,axis=0)/np.nansum(np.isfinite(offset),axis=0),axis=0)
+				#print(bestsub)
+				temp_w.append(normphot[0,bestsub])
+				temp_wc.append(normphot[1,bestsub])
+				temp_av.append(gspexphot['AV'][bestsub])
+				print(temp_w)
+			b = np.nanmedian(temp_w)
+			print(b)
+			west.append(np.nanmedian(temp_w))
+			photest['west'][i] = b
+			photest['weste'][i] = np.nanstd(temp_w)	
+			photest['wcest'][i] = np.nanmedian(temp_wc)
+			photest['wceste'][i] = np.nanstd(temp_wc)
+			photest['avest'][i] = np.nanmean(temp_av)
+
+	sav_dict = {'rd':rd, 'dd':dd, 'west':photest['west'], 'weste':photest['weste'], 'wcest':photest['wcest'], 'wceste':photest['wceste'], 'avest':photest['avest'], 'wobsphot':wobsphot, 'wobsphote':wobsphote, 'gspexphot':gspexphot, 'gobsphot':gobsphot, 'gstdphot':gstdphot}
+	df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest', 'wobsphot', 'wobsphote', 'gspexphot', 'gobsphot', 'gstdphot'])
+	df.to_csv('SerpensSouth_W-PHOT.csv')
+
+
 	return
 
 def main():
@@ -210,8 +244,8 @@ def main():
 	# Make full photometry table
 	bands = make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr)
 
-	# Get W-Band magnitudes
-	#get_w(bands)
+	# Get W-Band magnitudes and write to file
+	get_w(bands)
 
 	return bands
 
