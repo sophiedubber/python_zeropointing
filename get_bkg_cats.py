@@ -81,9 +81,7 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 	hm = [*(JH['hm'].tolist()),*b]
 	hme = [*(JH['hme'].tolist()),*b]
 
-	a = np.asarray([np.nan for i in range(len(jm))])
-	b = np.asarray([np.nan for i in range(len(JH))])
-	bands = {'rd':JH['rd'],'dd':JH['dd'],'jm':jm,'jme':jme,'hm':hm,'hme':hme,'j2m':b,'j2me':b,'h2m':b,'h2me':b,'k2m':b,'k2me':b,'ksm':a,'ksme':a,'bm':a,'bme':a,'vm':a,'vme':a,'rcm':a,'rcme':a,'icm':a,'icme':a,'gm':a,'gme':a,'rm':a,'rme':a,'im':a,'ime':a,'zm':a,'zme':a,'zps1m':a,'zps1me':a,'yps1m':a,'yps1me':a,'zum':a,'zume':a,'yum':a,'yume':a,'w1m':a,'w1me':a,'w2m':a,'w2me':a}
+	bands = {'rd':JH['rd'],'dd':JH['dd'],'jm':jm,'jme':jme,'hm':hm,'hme':hme,'j2m':np.asarray([np.nan for i in range(len(JH))]),'j2me':np.asarray([np.nan for i in range(len(JH))]),'h2m':np.asarray([np.nan for i in range(len(JH))]),'h2me':np.asarray([np.nan for i in range(len(JH))]),'k2m':np.asarray([np.nan for i in range(len(JH))]),'k2me':np.asarray([np.nan for i in range(len(JH))]),'ksm':np.asarray([np.nan for i in range(len(jm))]),'ksme':np.asarray([np.nan for i in range(len(jm))]),'bm':np.asarray([np.nan for i in range(len(jm))]),'bme':np.asarray([np.nan for i in range(len(jm))]),'vm':np.asarray([np.nan for i in range(len(jm))]),'vme':np.asarray([np.nan for i in range(len(jm))]),'rcm':np.asarray([np.nan for i in range(len(jm))]),'rcme':np.asarray([np.nan for i in range(len(jm))]),'icm':np.asarray([np.nan for i in range(len(jm))]),'icme':np.asarray([np.nan for i in range(len(jm))]),'gm':np.asarray([np.nan for i in range(len(jm))]),'gme':np.asarray([np.nan for i in range(len(jm))]),'rm':np.asarray([np.nan for i in range(len(jm))]),'rme':np.asarray([np.nan for i in range(len(jm))]),'im':np.asarray([np.nan for i in range(len(jm))]),'ime':np.asarray([np.nan for i in range(len(jm))]),'zm':np.asarray([np.nan for i in range(len(jm))]),'zme':np.asarray([np.nan for i in range(len(jm))]),'zps1m':np.asarray([np.nan for i in range(len(jm))]),'zps1me':np.asarray([np.nan for i in range(len(jm))]),'yps1m':np.asarray([np.nan for i in range(len(jm))]),'yps1me':np.asarray([np.nan for i in range(len(jm))]),'zum':np.asarray([np.nan for i in range(len(jm))]),'zume':np.asarray([np.nan for i in range(len(jm))]),'yum':np.asarray([np.nan for i in range(len(jm))]),'yume':np.asarray([np.nan for i in range(len(jm))]),'w1m':np.asarray([np.nan for i in range(len(jm))]),'w1me':np.asarray([np.nan for i in range(len(jm))]),'w2m':np.asarray([np.nan for i in range(len(jm))]),'w2me':np.asarray([np.nan for i in range(len(jm))])}
 
 	# Extend coordinate arrays
 	bands['rd'] = [*(bands['rd'].tolist()),*(np.asarray(tm['RAJ2000'])[indexu2m].tolist())]
@@ -177,10 +175,9 @@ def get_w(bands):
 	norm = [0 for i in range(nstd)]
 	west = []
 
-	#for i in range(njh):
-	for i in range(100):
+	for i in range(njh):
+	#for i in range(1000):
 		if sum(np.isfinite(wobsphot[6:,i])) >= 1:
-			print(i)
 			# Normalise to J H K
 			tab1 = np.asarray([[a for j in range(nstd)] for a in wobsphot[0:5,i]])
 			norm = np.nanmean(tab1-gstdphot[2:7],axis=0)
@@ -203,11 +200,8 @@ def get_w(bands):
 				temp_w.append(normphot[0,bestsub])
 				temp_wc.append(normphot[1,bestsub])
 				temp_av.append(gspexphot['AV'][bestsub])
-				print(temp_w)
-			b = np.nanmedian(temp_w)
-			print(b)
-			west.append(np.nanmedian(temp_w))
-			photest['west'][i] = b
+				
+			photest['west'][i] = np.nanmedian(temp_w)
 			photest['weste'][i] = np.nanstd(temp_w)	
 			photest['wcest'][i] = np.nanmedian(temp_wc)
 			photest['wceste'][i] = np.nanstd(temp_wc)
@@ -245,8 +239,8 @@ def main():
 	bands = make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr)
 
 	# Get W-Band magnitudes and write to file
-	get_w(bands)
+	sav_dict = get_w(bands)
 
-	return bands
+	return sav_dict
 
 bands = main()
