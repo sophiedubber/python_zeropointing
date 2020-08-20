@@ -146,7 +146,7 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 
 	return bands
 
-
+#
 # FUNCTION to calculate W photometry using full photometric table
 #
 def get_w(bands):
@@ -171,12 +171,11 @@ def get_w(bands):
 	njh = len(bands['rd'])
 	nstd = len(gstdphot_rows)
 
-	photest = {'west':[0.0 for i in range(njh)],'weste':[0.0 for i in range(njh)],'jest':[0.0 for i in range(njh)],'jeste':[0.0 for i in range(njh)],'hest':[0.0 for i in range(njh)],'heste':[0.0 for i in range(njh)],'wcest':[0.0 for i in range(njh)],'wceste':[0.0 for i in range(njh)],'avest':[0.0 for i in range(njh)]}
+	photest = {'west':[np.nan for i in range(njh)],'weste':[np.nan for i in range(njh)],'jest':[np.nan for i in range(njh)],'jeste':[np.nan for i in range(njh)],'hest':[np.nan for i in range(njh)],'heste':[np.nan for i in range(njh)],'wcest':[np.nan for i in range(njh)],'wceste':[np.nan for i in range(njh)],'avest':[np.nan for i in range(njh)]}
 	norm = [0 for i in range(nstd)]
 	west = []
 
 	for i in range(njh):
-	#for i in range(1000):
 		if sum(np.isfinite(wobsphot[6:,i])) >= 1:
 			# Normalise to J H K
 			tab1 = np.asarray([[a for j in range(nstd)] for a in wobsphot[0:5,i]])
@@ -191,12 +190,11 @@ def get_w(bands):
 			temp_w,temp_wc,temp_av = [],[],[]
 			for k in range(nsims):
 				tempophot = wobsphot[:,i] + np.random.normal(size=nfilt-2)*temperrphot
-				#print(normphot[0])
 				tab1 = np.asarray([[a for j in range(nstd)] for a in tempophot])
 				tab2 = np.asarray([[a for j in range(nstd)] for a in temperrphot])
-				offset = (normphot[2:,:] - tab1)/tab2 #	MIGHT NEED TO COME BACK TO THIS!
+				offset = (normphot[2:,:] - tab1)/tab2
 				bestsub = np.argmin(np.nansum(offset**2,axis=0)/np.nansum(np.isfinite(offset),axis=0),axis=0)
-				#print(bestsub)
+				
 				temp_w.append(normphot[0,bestsub])
 				temp_wc.append(normphot[1,bestsub])
 				temp_av.append(gspexphot['AV'][bestsub])
@@ -207,12 +205,14 @@ def get_w(bands):
 			photest['wceste'][i] = np.nanstd(temp_wc)
 			photest['avest'][i] = np.nanmean(temp_av)
 
-	sav_dict = {'rd':rd, 'dd':dd, 'west':photest['west'], 'weste':photest['weste'], 'wcest':photest['wcest'], 'wceste':photest['wceste'], 'avest':photest['avest'], 'wobsphot':wobsphot, 'wobsphote':wobsphote, 'gspexphot':gspexphot, 'gobsphot':gobsphot, 'gstdphot':gstdphot}
-	df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest', 'wobsphot', 'wobsphote', 'gspexphot', 'gobsphot', 'gstdphot'])
-	df.to_csv('SerpensSouth_W-PHOT.csv')
+	sav_dict = {'rd':bands['rd'], 'dd':bands['dd'], 'west':photest['west'], 'weste':photest['weste'], 'wcest':photest['wcest'], 'wceste':photest['wceste'], 'avest':photest['avest']}
+	df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest'])
+	#df.to_csv('SerpensSouth_W-PHOT.csv')
 
 
 	return
+
+# - - - - - - - - 
 
 def main():
 	# Read in JH catalogue
@@ -241,6 +241,6 @@ def main():
 	# Get W-Band magnitudes and write to file
 	sav_dict = get_w(bands)
 
-	return sav_dict
+	return
 
-bands = main()
+main()
