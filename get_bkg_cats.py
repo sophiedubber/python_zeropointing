@@ -212,6 +212,42 @@ def get_w(bands):
 
 	return
 
+
+# Try to paralellise function that calculates W - previously have used Pool, which requires one input split into equal chunks  - can i supply multiple inputs all split into the same sized chunks?
+
+def mp_get_w():
+
+        spexphot,obsphot = IRTF_tab_read()
+
+	ed('SerpensSouth_JH.csv',format='csv') Create full arrays of photometry and errors
+        wobsphot = np.asarray([bands['jm'],bands['hm'],bands['ksm'],bands['j2m'],bands['h2m'],bands['k2m'],bands['w1m'],bands['w2m'],bands['bm'],bands['vm'],bands['rcm'],bands['icm'],bands['gm'],bands['rm'],bands['im'],bands['zm'],bands['zps1m'],bands['yps1m'],bands['zum'],bands['yum']])
+        wobsphote = np.asarray([bands['jme'],bands['hme'],bands['ksme'],bands['j2me'],bands['h2me'],bands['k2me'],bands['w1me'],bands['w2me'],bands['bme'],bands['vme'],bands['rcme'],bands['icme'],bands['gme'],bands['rme'],bands['ime'],bands['zme'],bands['zps1me'],bands['yps1me'],bands['zume'],bands['yume']])
+        stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']])
+        nfilt = len(stdphot)
+
+        # Only use objects with enough photometric bands and av info - i.e identify objects with >5 table entries that aren't nan
+        stdphot_rows = list([x for x in y if x is not None] for y in zip_longest(*stdphot))
+        goodstd = np.where(np.logical_and(np.asarray([sum(np.isfinite(a)) for a in stdphot_rows]) > 5,np.logical_or(np.asarray(spexphot['AV']) > 0,np.asarray(spexphot['RV']) == 3.1)))
+        gspexphot = spexphot[goodstd[0]]
+        gobsphot = obsphot[goodstd[0]]
+        gstdphot_rows = np.asarray(stdphot_rows)[goodstd[0]]
+
+        gstdphot = np.asarray([gspexphot['W'],gspexphot['WC'],gspexphot['JMKO'],gspexphot['HMKO'],gspexphot['KSMKO'],gspexphot['J2M'],gspexphot['H2M'],gspexphot['K2M'],gobsphot['W1'],gobsphot['W2'],gobsphot['BJ'],gobsphot['VJ'],gobsphot['RC'],gobsphot['IC'],gobsphot['G_SD'],gobsphot['R_SD'],gobsphot['I_SD'],gspexphot['ZSD'],gspexphot['ZPS1'],gspexphot['YPS1'],gspexphot['ZUK'],gspexphot['YUK']])
+
+        njh = len(bands['rd'])
+        nstd = len(gstdphot_rows)
+
+        photest = {'west':[np.nan for i in range(njh)],'weste':[np.nan for i in range(njh)],'jest':[np.nan for i in range(njh)],'jeste':[np.nan for i in range(njh)],'hest':[np.nan for i in range(njh)],'heste':[np.nan for i in range(njh)],'wcest':[np.nan for i in range(njh)],'wceste':[np.nan for i in range(njh)],'avest':[np.nan for i in range(njh)]}
+        norm = [0 for i in range(nstd)]
+        west = []
+
+        # Setup multiprocessing function: split tables into chunks
+	size = int(len(wobsphot[0]/4))
+	wobsphot_chunks = [wobsphot[:,0:siz],wobsphot[:,siz:2*siz],wobsphot[:,2*siz:3*siz],wobsphot[:,3*siz:]]
+
+
+        return
+
 # - - - - - - - - 
 
 def main():
@@ -243,4 +279,4 @@ def main():
 
 	return
 
-main()
+#main()
