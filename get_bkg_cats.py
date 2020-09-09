@@ -1,10 +1,12 @@
 # - - - - - - - - 
 # Code to convert 2nd part of IDL zeropointing code to python3
-# - - - - - - - - 
+# - - - - - - - -
+import time 
 import numpy as np
 import pandas as pd
 import astropy.units as u
 import scipy.io as scio
+import scipy.stats as ss
 import matplotlib.pyplot as plt
 import astropy.coordinates as coord
 
@@ -156,15 +158,14 @@ def get_w(input_data):
 	wobsphote = input_data[1]
 
 	spexphot,obsphot = IRTF_tab_read()
-	stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']])
-	
+	stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK'],spexphot['INUM']])
 	stdphot_rows = list([x for x in y if x is not None] for y in zip_longest(*stdphot))
 	goodstd = np.where(np.logical_and(np.asarray([sum(np.isfinite(a)) for a in stdphot_rows]) > 5,np.logical_or(np.asarray(spexphot['AV']) > 0,np.asarray(spexphot['RV']) == 3.1)))
 	gspexphot = spexphot[goodstd[0]]	
 	gobsphot = obsphot[goodstd[0]]
 	gstdphot_rows = np.asarray(stdphot_rows)[goodstd[0]]
 
-	gstdphot = np.asarray([gspexphot['W'],gspexphot['WC'],gspexphot['JMKO'],gspexphot['HMKO'],gspexphot['KSMKO'],gspexphot['J2M'],gspexphot['H2M'],gspexphot['K2M'],gobsphot['W1'],gobsphot['W2'],gobsphot['BJ'],gobsphot['VJ'],gobsphot['RC'],gobsphot['IC'],gobsphot['G_SD'],gobsphot['R_SD'],gobsphot['I_SD'],gspexphot['ZSD'],gspexphot['ZPS1'],gspexphot['YPS1'],gspexphot['ZUK'],gspexphot['YUK']])
+	gstdphot = np.asarray([gspexphot['W'],gspexphot['WC'],gspexphot['JMKO'],gspexphot['HMKO'],gspexphot['KSMKO'],gspexphot['J2M'],gspexphot['H2M'],gspexphot['K2M'],gobsphot['W1'],gobsphot['W2'],gobsphot['BJ'],gobsphot['VJ'],gobsphot['RC'],gobsphot['IC'],gobsphot['G_SD'],gobsphot['R_SD'],gobsphot['I_SD'],gspexphot['ZSD'],gspexphot['ZPS1'],gspexphot['YPS1'],gspexphot['ZUK'],gspexphot['YUK'],gspexphot['INUM']])
 
 	njh = len(wobsphot[0])
 	nstd = len(gstdphot[0])
@@ -177,7 +178,7 @@ def get_w(input_data):
 	avest=[np.nan for i in range(njh)]
 	rd = [np.nan for i in range(njh)]
 	dd = [np.nan for i in range(njh)]
-
+	spt = [np.nan for i in range(njh)]
 	for i in range(njh):
 		if sum(np.isfinite(wobsphot[6:,i])) >= 1:
 			# Normalise to J H K
@@ -190,35 +191,38 @@ def get_w(input_data):
 			# Simple MCMC to get expected W
 			temperrphot = np.choose(wobsphote[2:,i] < 0.02, (wobsphote[2:,i], 0.02))
 			nsims = 20
-			temp_w,temp_wc,temp_av = [],[],[]
+			temp_w,temp_wc,temp_av,temp_spt = [],[],[],[]
 			for k in range(nsims):
-				tempophot = wobsphot[2:,i] + np.random.normal(size=nfilt-2)*temperrphot
+				tempophot = wobsphot[2:,i] + np.random.normal(size=nfilt-3)*temperrphot
 				tab1 = np.asarray([[a for j in range(nstd)] for a in tempophot])
 				tab2 = np.asarray([[a for j in range(nstd)] for a in temperrphot])
-				offset = (normphot[2:,:] - tab1)/tab2
+				offset = (normphot[2:nfilt-1,:] - tab1)/tab2
 				bestsub = np.argmin(np.nansum(offset**2,axis=0)/np.nansum(np.isfinite(offset),axis=0),axis=0)
 				
 				temp_w.append(normphot[0,bestsub])
 				temp_wc.append(normphot[1,bestsub])
 				temp_av.append(gspexphot['AV'][bestsub])
+				temp_spt.append(gspexphot['INUM'][bestsub])
 				
 			west[i] = np.nanmedian(temp_w)
 			weste[i] = np.nanstd(temp_w)	
 			wcest[i] = np.nanmedian(temp_wc)
 			wceste[i] = np.nanstd(temp_wc)
 			avest[i] = np.nanmean(temp_av)
+			spt[i] = np.float(ss.mode(temp_spt)[0][0])
 			rd[i] = wobsphot[0,i]
 			dd[i] = wobsphot[1,i]
 
-	wcol = Column(west,name='west')
-	wecol = Column(weste,name='weste')
-	wccol = Column(wcest,name='wcest')
-	wcecol = Column(wceste,name='wceste')
-	acol = Column(avest,name='avest')
-	rcol = Column(rd,name='rd')
-	dcol = Column(dd,name='dd')
+	wcol = Column(np.around(west,6),name='west')
+	wecol = Column(np.around(weste,6),name='weste')
+	wccol = Column(np.around(wcest,6),name='wcest')
+	wcecol = Column(np.around(wceste,6),name='wceste')
+	acol = Column(np.around(avest,6),name='avest')
+	rcol = Column(np.around(rd,4),name='rd')
+	dcol = Column(np.around(dd,4),name='dd')
+	scol = Column(np.around(spt,2),name='spt')
 
-	results_tab.add_columns([rcol,dcol,wcol,wecol,wccol,wcecol,acol])
+	results_tab.add_columns([rcol,dcol,wcol,wecol,wccol,wcecol,acol,scol])
 
 	return results_tab
 
@@ -233,40 +237,23 @@ def mp_get_w(bands):
 	# Create full arrays of photometry and errors
         wobsphot = np.asarray([bands['rd'],bands['dd'],bands['jm'],bands['hm'],bands['ksm'],bands['j2m'],bands['h2m'],bands['k2m'],bands['w1m'],bands['w2m'],bands['bm'],bands['vm'],bands['rcm'],bands['icm'],bands['gm'],bands['rm'],bands['im'],bands['zm'],bands['zps1m'],bands['yps1m'],bands['zum'],bands['yum']])
         wobsphote = np.asarray([bands['rd'],bands['dd'],bands['jme'],bands['hme'],bands['ksme'],bands['j2me'],bands['h2me'],bands['k2me'],bands['w1me'],bands['w2me'],bands['bme'],bands['vme'],bands['rcme'],bands['icme'],bands['gme'],bands['rme'],bands['ime'],bands['zme'],bands['zps1me'],bands['yps1me'],bands['zume'],bands['yume']])
-        stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']])
-        nfilt = len(stdphot)
-
-        # Only use objects with enough photometric bands and av info - i.e identify objects with >5 table entries that aren't nan
-        stdphot_rows = list([x for x in y if x is not None] for y in zip_longest(*stdphot))
-        goodstd = np.where(np.logical_and(np.asarray([sum(np.isfinite(a)) for a in stdphot_rows]) > 5,np.logical_or(np.asarray(spexphot['AV']) > 0,np.asarray(spexphot['RV']) == 3.1)))
-        gspexphot = spexphot[goodstd[0]]
-        gobsphot = obsphot[goodstd[0]]
-        gstdphot_rows = np.asarray(stdphot_rows)[goodstd[0]]
-
-        gstdphot = np.asarray([gspexphot['W'],gspexphot['WC'],gspexphot['JMKO'],gspexphot['HMKO'],gspexphot['KSMKO'],gspexphot['J2M'],gspexphot['H2M'],gspexphot['K2M'],gobsphot['W1'],gobsphot['W2'],gobsphot['BJ'],gobsphot['VJ'],gobsphot['RC'],gobsphot['IC'],gobsphot['G_SD'],gobsphot['R_SD'],gobsphot['I_SD'],gspexphot['ZSD'],gspexphot['ZPS1'],gspexphot['YPS1'],gspexphot['ZUK'],gspexphot['YUK']])
-
-        wobsphot = wobsphot[:,0:100]
-        wobsphote = wobsphote[:,0:100]
-
+       
         # Setup multiprocessing function: split tables into chunks
         size1 = int(len(wobsphot[0])/4)
         size2 = int(len(wobsphote[0])/4)  
 
         print('Calculating W...')
-        #wobsphot_chunks = [wobsphot[:,0:size1],wobsphot[:,size1:2*size1],wobsphot[:,2*size1:3*size1],wobsphot[:,3*size1:]]
-        #wobsphote_chunks = [wobsphote[:,0:size2],wobsphote[:,size2:2*size2],wobsphote[:,2*size2:3*size2],wobsphote[:,3*size2:]]
+        start = time.time()
         data_chunks = [[wobsphot[:,0:size1],wobsphote[:,0:size2]],[wobsphot[:,size1:2*size1],wobsphote[:,size2:2*size2]],[wobsphot[:,2*size1:3*size1],wobsphote[:,2*size2:3*size2]],[wobsphot[:,3*size1:],wobsphote[:,3*size2:]]]
         pool = Pool(processes=4) 
         result = pool.map(get_w,data_chunks)
 
         # Join results table back together
         results = vstack([result[0],result[1],result[2],result[3]])
-        print(results)
+        results.write('SerpensSouth_W-PHOT_spt.dat',format='ascii')
 
-        sav_dict = {'rd':bands['rd'], 'dd':bands['dd'], 'west':results['west'], 'weste':results['weste'], 'wcest':results['wcest'], 'wceste':results['wceste'], 'avest':results['avest']}
-        #df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest'])
-        #df.to_csv('SerpensSouth_W-PHOT.csv')
-
+        end = time.time()
+        print('Took',str(end-start))
         return
 
 # - - - - - - - - 
@@ -300,4 +287,4 @@ def main():
 
 	return
 
-#main()
+main()
