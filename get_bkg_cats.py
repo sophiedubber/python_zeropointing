@@ -8,6 +8,7 @@ import scipy.io as scio
 import matplotlib.pyplot as plt
 import astropy.coordinates as coord
 
+from multiprocessing import Pool
 from astroquery.vizier import Vizier
 from astropy.table import Table,Column
 from make_jh_sav import cat_match
@@ -149,31 +150,29 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 #
 # FUNCTION to calculate W photometry using full photometric table
 #
-def get_w(bands):
+def get_w(wobsphot,wobsphote):
+
 
 	spexphot,obsphot = IRTF_tab_read()
-
-	# Create full arrays of photometry and errors
-	wobsphot = np.asarray([bands['jm'],bands['hm'],bands['ksm'],bands['j2m'],bands['h2m'],bands['k2m'],bands['w1m'],bands['w2m'],bands['bm'],bands['vm'],bands['rcm'],bands['icm'],bands['gm'],bands['rm'],bands['im'],bands['zm'],bands['zps1m'],bands['yps1m'],bands['zum'],bands['yum']])
-	wobsphote = np.asarray([bands['jme'],bands['hme'],bands['ksme'],bands['j2me'],bands['h2me'],bands['k2me'],bands['w1me'],bands['w2me'],bands['bme'],bands['vme'],bands['rcme'],bands['icme'],bands['gme'],bands['rme'],bands['ime'],bands['zme'],bands['zps1me'],bands['yps1me'],bands['zume'],bands['yume']])
-	stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']]) 
-	nfilt = len(stdphot)
-
-	# Only use objects with enough photometric bands and av info - i.e identify objects with >5 table entries that aren't nan
+	stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']])
+	
 	stdphot_rows = list([x for x in y if x is not None] for y in zip_longest(*stdphot))
 	goodstd = np.where(np.logical_and(np.asarray([sum(np.isfinite(a)) for a in stdphot_rows]) > 5,np.logical_or(np.asarray(spexphot['AV']) > 0,np.asarray(spexphot['RV']) == 3.1)))
-	gspexphot = spexphot[goodstd[0]]
+	gspexphot = spexphot[goodstd[0]]	
 	gobsphot = obsphot[goodstd[0]]
 	gstdphot_rows = np.asarray(stdphot_rows)[goodstd[0]]
 
 	gstdphot = np.asarray([gspexphot['W'],gspexphot['WC'],gspexphot['JMKO'],gspexphot['HMKO'],gspexphot['KSMKO'],gspexphot['J2M'],gspexphot['H2M'],gspexphot['K2M'],gobsphot['W1'],gobsphot['W2'],gobsphot['BJ'],gobsphot['VJ'],gobsphot['RC'],gobsphot['IC'],gobsphot['G_SD'],gobsphot['R_SD'],gobsphot['I_SD'],gspexphot['ZSD'],gspexphot['ZPS1'],gspexphot['YPS1'],gspexphot['ZUK'],gspexphot['YUK']])
 
-	njh = len(bands['rd'])
-	nstd = len(gstdphot_rows)
-
-	photest = {'west':[np.nan for i in range(njh)],'weste':[np.nan for i in range(njh)],'jest':[np.nan for i in range(njh)],'jeste':[np.nan for i in range(njh)],'hest':[np.nan for i in range(njh)],'heste':[np.nan for i in range(njh)],'wcest':[np.nan for i in range(njh)],'wceste':[np.nan for i in range(njh)],'avest':[np.nan for i in range(njh)]}
-	norm = [0 for i in range(nstd)]
-	west = []
+	njh = len(wobsphot[0])
+	nstd = len(gstdphot[0])
+	nfilt = len(gstdphot)
+	results_tab=Table()
+	west=[np.nan for i in range(njh)]
+	weste=[np.nan for i in range(njh)]
+	wcest=[np.nan for i in range(njh)]
+	wceste=[np.nan for i in range(njh)]
+	avest=[np.nan for i in range(njh)]
 
 	for i in range(njh):
 		if sum(np.isfinite(wobsphot[6:,i])) >= 1:
@@ -199,18 +198,21 @@ def get_w(bands):
 				temp_wc.append(normphot[1,bestsub])
 				temp_av.append(gspexphot['AV'][bestsub])
 				
-			photest['west'][i] = np.nanmedian(temp_w)
-			photest['weste'][i] = np.nanstd(temp_w)	
-			photest['wcest'][i] = np.nanmedian(temp_wc)
-			photest['wceste'][i] = np.nanstd(temp_wc)
-			photest['avest'][i] = np.nanmean(temp_av)
+			west[i] = np.nanmedian(temp_w)
+			weste[i] = np.nanstd(temp_w)	
+			wcest[i] = np.nanmedian(temp_wc)
+			wceste[i] = np.nanstd(temp_wc)
+			avest[i] = np.nanmean(temp_av)
 
-	sav_dict = {'rd':bands['rd'], 'dd':bands['dd'], 'west':photest['west'], 'weste':photest['weste'], 'wcest':photest['wcest'], 'wceste':photest['wceste'], 'avest':photest['avest']}
-	df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest'])
-	#df.to_csv('SerpensSouth_W-PHOT.csv')
+	wcol = Column(west,name='W_est')
+	wecol = Column(weste,name='W_est_e')
+	wccol = Column(wcest,name='Wc_est')
+	wcecol = Column(wceste,name='Wc_est_e')
+	acol = Column(avest,name='Av_est')
 
+	results_tab.add_columns([wcol,wecol,wccol,wcecol,acol])
 
-	return
+	return results_tab
 
 
 # Try to paralellise function that calculates W - previously have used Pool, which requires one input split into equal chunks  - can i supply multiple inputs all split into the same sized chunks?
@@ -219,7 +221,7 @@ def mp_get_w():
 
         spexphot,obsphot = IRTF_tab_read()
 
-	ed('SerpensSouth_JH.csv',format='csv') Create full arrays of photometry and errors
+	# Create full arrays of photometry and errors
         wobsphot = np.asarray([bands['jm'],bands['hm'],bands['ksm'],bands['j2m'],bands['h2m'],bands['k2m'],bands['w1m'],bands['w2m'],bands['bm'],bands['vm'],bands['rcm'],bands['icm'],bands['gm'],bands['rm'],bands['im'],bands['zm'],bands['zps1m'],bands['yps1m'],bands['zum'],bands['yum']])
         wobsphote = np.asarray([bands['jme'],bands['hme'],bands['ksme'],bands['j2me'],bands['h2me'],bands['k2me'],bands['w1me'],bands['w2me'],bands['bme'],bands['vme'],bands['rcme'],bands['icme'],bands['gme'],bands['rme'],bands['ime'],bands['zme'],bands['zps1me'],bands['yps1me'],bands['zume'],bands['yume']])
         stdphot = np.asarray([spexphot['W'],spexphot['WC'],spexphot['JMKO'],spexphot['HMKO'],spexphot['KSMKO'],spexphot['J2M'],spexphot['H2M'],spexphot['K2M'],obsphot['W1'],obsphot['W2'],obsphot['BJ'],obsphot['VJ'],obsphot['RC'],obsphot['IC'],obsphot['G_SD'],obsphot['R_SD'],obsphot['I_SD'],spexphot['ZSD'],spexphot['ZPS1'],spexphot['YPS1'],spexphot['ZUK'],spexphot['YUK']])
@@ -242,9 +244,23 @@ def mp_get_w():
         west = []
 
         # Setup multiprocessing function: split tables into chunks
-	size = int(len(wobsphot[0]/4))
-	wobsphot_chunks = [wobsphot[:,0:siz],wobsphot[:,siz:2*siz],wobsphot[:,2*siz:3*siz],wobsphot[:,3*siz:]]
+        size1 = int(len(wobsphot[0])/4)
+        size2 = int(len(wobsphote[0])/4)  
 
+        wobsphot_chunks = [wobsphot[:,0:size1],wobsphot[:,size1:2*size1],wobsphot[:,2*size1:3*size1],wobsphot[:,3*size1:]]
+        wobsphote_chunks = [wobsphote[:,0:size2],wobsphote[:,size2:2*size2],wobsphote[:,2*size2:3*size2],wobsphote[:,3*size2:]]
+        pool = Pool(processes=4) 
+        result = pool.starmap(get_w,wobsphot_chunks,wobsphote_chunks)
+
+        # Join results table back together
+        full1 = join(result[0],result[1],join_type='outer')
+        full2 = join(result[2],result[3],join_type='outer')
+
+        results = join(full1,full2,join_type='outer')
+
+        sav_dict = {'rd':bands['rd'], 'dd':bands['dd'], 'west':results['west'], 'weste':results['weste'], 'wcest':results['wcest'], 'wceste':results['wceste'], 'avest':results['avest']}
+        df = pd.DataFrame(sav_dict,columns=['rd', 'dd', 'west', 'weste', 'wcest', 'wceste', 'avest'])
+        #df.to_csv('SerpensSouth_W-PHOT.csv')
 
         return
 
