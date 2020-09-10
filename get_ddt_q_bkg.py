@@ -57,6 +57,24 @@ def find_zeropoint(phottab,wphottab,w):
 	wm = zpsyn-2.5*np.log10(w['FLUX_AUTO'])
 	wme = 1.085*w['FLUXERR_AUTO']/w['FLUX_AUTO']
 
+	# Convert numerical spectral types to strings
+	spt_list = np.around(np.array(wphottab['spt']),2)
+	spt_str = []
+	for i in range(len(spt_list)):
+		if 'nan' in str(spt_list[i]):
+			spt_str.append('Nan')
+		else:
+			if '4' in str(spt_list[i])[1]:
+				spt_str.append('F'+str(spt_list[i])[3:])
+			if '5' in str(spt_list[i])[1]:
+				spt_str.append('G'+str(spt_list[i])[3:])		
+			if '6' in str(spt_list[i])[1]:
+				spt_str.append('K'+str(spt_list[i])[3:])
+			if '7' in str(spt_list[i])[1]:
+				spt_str.append('M'+str(spt_list[i])[3:])
+			else:
+				spt_str.append('NOTHING')
+
 	# Write to file
 	# Columns: RA,Dec,W,We,J,Je,H,He,WS,JS,HS
 	final_tab = Table()
@@ -69,21 +87,65 @@ def find_zeropoint(phottab,wphottab,w):
 	h = Column(np.around(np.array(phottab['hm'][syn_ind[flagtest]]),2),name='H')
 	he = Column(np.around(np.array(phottab['hme'][syn_ind[flagtest]]),2),name='HERR')
 	av = Column(np.around(np.array(wphottab['avest'][syn_ind[flagtest]]),2),name='AV')
-	final_tab.add_columns([ra,dec,w,we,j,je,h,he,av])
-	#final_tab.write('SerpensSouth_WJHpy.dat',format='ascii',overwrite=True)
+	spt = Column(np.around(np.array(wphottab['spt'][syn_ind[flagtest]]),2),name='SPT')
+	sptst = Column(np.array(spt_str)[syn_ind[flagtest]],name='SPT_STR')
+	final_tab.add_columns([ra,dec,w,we,j,je,h,he,av,spt,sptst])
+	final_tab.write('SerpensSouth_WJHpy_spt.dat',format='ascii',overwrite=True)
 
 	return final_tab
+
+
+
+def spt_histogram(final_tab):
+
+    str_spt = ('O','B','A','F','G','K','M','L','T')
+
+    spt = final_tab['SPT_STR']
+    spt = [a[0] for a in spt]
+    new_spt = []
+    #convert string spt to numerical spt 
+    for i in range(len(spt)):
+        if 'O' in spt[i]:
+            new_spt.append(1.0)
+        elif 'B' in spt[i]:
+            new_spt.append(2.0)
+        elif 'A' in spt[i]:
+            new_spt.append(3.0)
+        elif 'F' in spt[i]:
+            new_spt.append(4.0)
+        elif 'G' in spt[i]:
+            new_spt.append(5.0)
+        elif 'K' in spt[i]:
+            new_spt.append(6.0)
+        elif 'M' in spt[i]:
+            new_spt.append(7.0)
+        elif 'L' in spt[i]:
+            new_spt.append(8.0)
+        elif 'T' in spt[i]:
+            new_spt.append(9.0)
+
+    bins = np.linspace(1,10,10)
+    plt.figure()
+    plt.hist(new_spt,bins,facecolor='paleturquoise',edgecolor='k')
+    plt.xticks((1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5),('O','B','A','F','G','K','M','L','T'))
+    plt.xlabel('SpT')
+    plt.ylabel('N')
+    plt.title('Distribution of Spectral Types')
+
+    plt.show()
+
+    return
 
 # - - - - - - - - 
 def main():
 
 	# Read in photometry tables
 	phottab = Table.read('SerpensSouth_ALL-PHOT.csv',format='csv')
-	wphottab = Table.read('SerpensSouth_W-PHOT_edit.csv',format='csv')
+	wphottab = Table.read('SerpensSouth_W-PHOT_spt.dat',format='ascii')
 	w = Table.read('serpenssouth_sexcat_w.fits',format='fits')
 
-	find_zeropoint(phottab,wphottab,w) 
+	tab = find_zeropoint(phottab,wphottab,w) 
+	spt_histogram(tab)
+	return tab 
 
-	return 
-
-main()
+tab = main()
