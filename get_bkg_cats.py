@@ -210,8 +210,8 @@ def get_w(input_data):
 			wceste[i] = np.nanstd(temp_wc)
 			avest[i] = np.nanmean(temp_av)
 			spt[i] = np.float(ss.mode(temp_spt)[0][0])
-			rd[i] = wobsphot[0,i]
-			dd[i] = wobsphot[1,i]
+		rd[i] = wobsphot[0,i]
+		dd[i] = wobsphot[1,i]
 
 	wcol = Column(np.around(west,6),name='west')
 	wecol = Column(np.around(weste,6),name='weste')
@@ -250,7 +250,7 @@ def mp_get_w(bands):
 
         # Join results table back together
         results = vstack([result[0],result[1],result[2],result[3]])
-        results.write('SerpensSouth_W-PHOT_spt.dat',format='ascii')
+        results.write('SerpensSouth_W-PHOT_spt.dat',format='ascii',overwrite=True)
 
         end = time.time()
         print('Took',str(end-start))
