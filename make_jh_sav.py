@@ -1,6 +1,7 @@
 # - - - - - - - - -
 #code to convert 1st part of IDL zeropointing code to python3
 # - - - - - - - - 
+import sys
 import numpy as np
 import pandas as pd
 import scipy.io as scio
@@ -49,13 +50,16 @@ def get_zpstd(a,vec1,uplim,off1,off2,off3):
 #
 # FUNCTION that uses astropy.coordinates to match the two catalgoues
 #
-def cat_match(c1,c2,max_sep,colra1,coldec1,colra2,coldec2,CONVERT=True):
+def cat_match(c1,c2,max_sep,colra1,coldec1,colra2,coldec2,CONVERT1=True,CONVERT2=True):
 
-	if CONVERT:
+	if CONVERT1:
 		cat1 = SkyCoord(ra=c1[colra1]*u.degree, dec=c1[coldec1]*u.degree)
 	else:
 		cat1 = SkyCoord(ra=c1[colra1],dec=c1[coldec1])
-	cat2 = SkyCoord(ra=c2[colra2]*u.degree, dec=c2[coldec2]*u.degree)
+	if CONVERT2:
+		cat2 = SkyCoord(ra=c2[colra2]*u.degree, dec=c2[coldec2]*u.degree)
+	else:
+		cat2 = SkyCoord(ra=c2[colra2], dec=c2[coldec2])
 	idx, d2d, d3d = cat1.match_to_catalog_sky(cat2)
 	sep_constraint = np.where(d2d < max_sep)
 	cat1_matches = c1[sep_constraint]
@@ -84,7 +88,7 @@ def sav_tab(jm,hm,jzpoff,hzpoff,jzpstd,hzpstd):
 
 	sav_dict = {'rd':rd,'dd':dd,'jm':jmag,'jme':jmage,'hm':hmag,'hme':hmage,'js':js,'hs':hs}
 	df = pd.DataFrame(sav_dict,columns=['rd','dd','jm','jme','hm','hme','js','hs'])
-	df.to_csv('SerpensSouth_JH.csv')
+	df.to_csv('SerpensCore_JH.csv')
 
 	return
 
@@ -92,8 +96,11 @@ def sav_tab(jm,hm,jzpoff,hzpoff,jzpstd,hzpstd):
 
 def main():
 	# Read in input files
-	j = Table.read('serpenssouth_sexcat_j.fits',format='fits')
-	h = Table.read('serpenssouth_sexcat_h.fits',format='fits')
+	file1 = str(sys.argv[1])
+	file2 = str(sys.argv[2])
+
+	j = Table.read(file1,format='fits')
+	h = Table.read(file2,format='fits')
 
 	jzpstd,jzpoff = get_zpstd(j,0,15.8,-0.0047,-0.0448,0.00964)
 	print(jzpstd)
@@ -109,16 +116,15 @@ def main():
 	jcat = j[jgood]
 	hcat = h[hgood]
 	# Crossmatch J and H catalogues: here the IDL code uses kna_match_cats - could I make use of astropy instead?
-	hm,jm,indh,indj = cat_match(hcat,jcat,1.0*u.arcsec,'ALPHA_J2000','DELTA_J2000','ALPHA_J2000','DELTA_J2000')	
+	hm,jm,indh,indj = cat_match(hcat,jcat,1.0*u.arcsec,'ALPHA_J2000','DELTA_J2000','ALPHA_J2000','DELTA_J2000',CONVERT1=False,CONVERT2=False)	
 	print(len(hcat),' sources in 1')
 	print(len(jcat),' sources in 2')
 	print(len(hm),' sources matched')
 
-	print(jm)
 
 	sav_tab(jm,hm,jzpoff,hzpoff,jzpstd,hzpstd)
 
 	return 
 
-#main()
+main()
 
