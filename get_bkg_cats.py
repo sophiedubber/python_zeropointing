@@ -1,6 +1,7 @@
 # - - - - - - - - 
 # Code to convert 2nd part of IDL zeropointing code to python3
 # - - - - - - - -
+import sys
 import time 
 import numpy as np
 import pandas as pd
@@ -44,10 +45,10 @@ def query(cen,dis,cat,viznam):
 #
 # FUNCTION to add in bands from catalogues to main photometry table
 #
-def matching(matchcat,JH,mr,bands,edit_list):
+def matching(matchcat,JH,mr,bands,edit_list,ra='RAJ2000',dec='DEJ2000'):
 
 	if len(matchcat) > 0:
-		match,JH_match,ind_match,ind_JH = cat_match(matchcat,JH,mr*u.arcsec,'RAJ2000','DEJ2000','rd','dd',CONVERT=False)
+		match,JH_match,ind_match,ind_JH = cat_match(matchcat,JH,mr*u.arcsec,ra,dec,'rd','dd',CONVERT1=False)
 		for i in range(len(edit_list)):
 			bands[edit_list[i][0]][ind_JH] = matchcat[edit_list[i][1]][ind_match]
 
@@ -72,7 +73,7 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 	
 	# Find matches between JH table and 2MASS
 	# ind_tm = indices of objects that are matched in 2MASS, ind_JH = indices of objects that are matched in WBand
-	tm_match,JH_match,ind_tm,ind_JH = cat_match(tm,JH,mr*u.arcsec,'RAJ2000','DEJ2000','rd','dd',CONVERT=False)
+	tm_match,JH_match,ind_tm,ind_JH = cat_match(tm,JH,mr*u.arcsec,'RAJ2000','DEJ2000','rd','dd',CONVERT1=False)
 	injh = np.asarray([0 for i in range(len(tm))])
 	injh[ind_tm] = 1
 	# Unique 2MASS detections - objects in 2MASS query of region that AREN'T in WBand catalogue
@@ -118,12 +119,12 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 
 	# Find matches between SDSS and JH
 	edit_list = [['gm','gmag'],['gme','e_gmag'],['rm','rmag'],['rme','e_rmag'],['im','imag'],['ime','e_imag'],['zm','zmag'],['zme','e_zmag']]
-	bands = matching(sdss,JH,mr,bands,edit_list)
+	bands = matching(sdss,JH,mr,bands,edit_list,ra='RA_ICRS',dec='DE_ICRS')
 	
 	# Find matches between DENIS and JH
 	edit_list = [['icm','Imag'],['icme','e_Imag']]
 	if len(denis) > 0:
-		denis_match,JH_match,ind_denis,ind_JH = cat_match(denis,JH,mr*u.arcsec,'RAJ2000','DEJ2000','rd','dd',CONVERT=False)
+		denis_match,JH_match,ind_denis,ind_JH = cat_match(denis,JH,mr*u.arcsec,'RAJ2000','DEJ2000','rd','dd',CONVERT1=False)
 		for i in range(len(edit_list)):
 			bands[edit_list[i][0]][ind_JH] = denis[edit_list[i][1]][ind_denis]
 	finite_check = np.where(np.isfinite(np.asarray(bands['k2m'])[ind_JH]))
@@ -145,7 +146,7 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 
 	# Save table with all photometry
 	df = pd.DataFrame(bands,columns=['rd','dd','jm','jme','hm','hme','j2m','j2me','h2m','h2me','k2m','k2me','ksm','ksme','bm','bme','vm','vme','rcm','rcme','icm','icme','gm','gme','rm','rme','im','ime','zm','zme','zps1m','zps1me','yps1m','yps1me','zum','zume','yum','yume','w1m','w1me','w2m','w2me'])
-	#df.to_csv('SerpensSouth_ALL-PHOT.csv')
+	df.to_csv('SerpensCore_ALL-PHOT.csv')
 
 	return bands
 
@@ -250,7 +251,7 @@ def mp_get_w(bands):
 
         # Join results table back together
         results = vstack([result[0],result[1],result[2],result[3]])
-        results.write('SerpensSouth_W-PHOT_spt.dat',format='ascii',overwrite=True)
+        results.write('SerpensCore_W-PHOT_spt.dat',format='ascii',overwrite=True)
 
         end = time.time()
         print('Took',str(end-start))
@@ -260,7 +261,8 @@ def mp_get_w(bands):
 
 def main():
 	# Read in JH catalogue
-	JH = Table.read('SerpensSouth_JH.csv',format='csv')
+	file = str(sys.argv[1])
+	JH = Table.read(file,format='csv')
 	# Matching radius (arcsecs)
 	mr = 2.0
 	# Option to just look at core of region
