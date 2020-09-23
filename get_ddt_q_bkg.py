@@ -1,6 +1,7 @@
 # - - - - - - - - - - 
 # Code to convert 3rd part of IDL zeropointing code to python3
 # - - - - - - - - 
+import sys
 import numpy as np
 import astropy.units as u
 import scipy.io as scio
@@ -29,7 +30,7 @@ Vizier.ROW_LIMIT = 99999
 def find_zeropoint(phottab,wphottab,w):
 
 	wphottab = wphottab.filled(np.nan)
-	w_match, wphottab_match, ww_ind, syn_ind = cat_match(w,wphottab,1.0*u.arcsec,'ALPHA_J2000','DELTA_J2000','rd','dd',CONVERT=False)
+	w_match, wphottab_match, ww_ind, syn_ind = cat_match(w,wphottab,1.0*u.arcsec,'ALPHA_J2000','DELTA_J2000','rd','dd',CONVERT1=False)
 	emko = 1.85
 	qmmko = -0.043
 
@@ -59,21 +60,21 @@ def find_zeropoint(phottab,wphottab,w):
 
 	# Convert numerical spectral types to strings
 	spt_list = np.around(np.array(wphottab['spt']),2)
-	spt_str = []
+	spt_str = [np.nan for i in range(len(spt_list))]
 	for i in range(len(spt_list)):
 		if 'nan' in str(spt_list[i]):
-			spt_str.append('Nan')
+			spt_str[i] = np.nan
 		else:
 			if '4' in str(spt_list[i])[1]:
-				spt_str.append('F'+str(spt_list[i])[3:])
+				spt_str[i] = 'F'+str(spt_list[i])[3:]
 			if '5' in str(spt_list[i])[1]:
-				spt_str.append('G'+str(spt_list[i])[3:])		
+				spt_str[i] = 'G'+str(spt_list[i])[3:]		
 			if '6' in str(spt_list[i])[1]:
-				spt_str.append('K'+str(spt_list[i])[3:])
+				spt_str[i] = 'K'+str(spt_list[i])[3:]
 			if '7' in str(spt_list[i])[1]:
-				spt_str.append('M'+str(spt_list[i])[3:])
-			else:
-				spt_str.append('NOTHING')
+				spt_str[i] = 'M'+str(spt_list[i])[3:]
+			#else:
+			#	spt_str[i] = str('NOTHING')
 
 	# Write to file
 	# Columns: RA,Dec,W,We,J,Je,H,He,WS,JS,HS
@@ -140,9 +141,12 @@ def spt_histogram(final_tab):
 def main():
 
 	# Read in photometry tables
-	phottab = Table.read('SerpensSouth_ALL-PHOT.csv',format='csv')
-	wphottab = Table.read('SerpensSouth_W-PHOT_spt.dat',format='ascii')
-	w = Table.read('serpenssouth_sexcat_w.fits',format='fits')
+	file1 = str(sys.argv[1]) #...._ALL-PHOT
+	file2 = str(sys.argv[2]) #....._W-PHOT
+	file3 = str(sys.argv[3]) #....._sexcat_w
+	phottab = Table.read(file1,format='csv')
+	wphottab = Table.read(file2,format='ascii')
+	w = Table.read(file3,format='fits')
 
 	tab = find_zeropoint(phottab,wphottab,w) 
 	spt_histogram(tab)
