@@ -88,7 +88,7 @@ def sav_tab(jm,hm,jzpoff,hzpoff,jzpstd,hzpstd):
 
 	sav_dict = {'rd':rd,'dd':dd,'jm':jmag,'jme':jmage,'hm':hmag,'hme':hmage,'js':js,'hs':hs}
 	df = pd.DataFrame(sav_dict,columns=['rd','dd','jm','jme','hm','hme','js','hs'])
-	df.to_csv('SerpensCore_JH.csv')
+	df.to_csv('SigmaOri_JH.csv')
 
 	return
 
@@ -99,8 +99,14 @@ def main():
 	file1 = str(sys.argv[1])
 	file2 = str(sys.argv[2])
 
-	j = Table.read(file1,format='fits')
-	h = Table.read(file2,format='fits')
+	#Check input file extension:
+	if '.sexcat' in file1:
+		j = Table.read(file1,hdu=2)
+		h = Table.read(file2,hdu=2)
+
+	elif '.fits' in file1:
+		j = Table.read(file1,format='fits')
+		h = Table.read(file2,format='fits')
 
 	jzpstd,jzpoff = get_zpstd(j,0,15.8,-0.0047,-0.0448,0.00964)
 	print(jzpstd)
