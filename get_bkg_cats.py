@@ -18,10 +18,10 @@ from make_jh_sav import cat_match
 from itertools import zip_longest
 Vizier.ROW_LIMIT = 99999
 # - - - - - - - - 
-# Input Files:
+# Input Files e.g: arg[1]
 # - SerpensSouth_JH.csv
 
-# Output Files:
+# Output Files e.g: arg[2], arg[3]
 # - SerpensSouth_ALL-PHOT.csv
 # - SerpensSouth_W-PHOT.csv
 # - - - - - - - -
@@ -146,7 +146,7 @@ def make_table(JH,tm,wise,usno,apass,sdss,denis,ukidsg,ukidsl,panstars,mr):
 
 	# Save table with all photometry
 	df = pd.DataFrame(bands,columns=['rd','dd','jm','jme','hm','hme','j2m','j2me','h2m','h2me','k2m','k2me','ksm','ksme','bm','bme','vm','vme','rcm','rcme','icm','icme','gm','gme','rm','rme','im','ime','zm','zme','zps1m','zps1me','yps1m','yps1me','zum','zume','yum','yume','w1m','w1me','w2m','w2me'])
-	df.to_csv('SerpensCore_ALL-PHOT.csv')
+	df.to_csv(str(sys.argv[2]))
 
 	return bands
 
@@ -251,7 +251,7 @@ def mp_get_w(bands):
 
         # Join results table back together
         results = vstack([result[0],result[1],result[2],result[3]])
-        results.write('SerpensCore_W-PHOT_spt.dat',format='ascii',overwrite=True)
+        results.write(str(sys.argv[3]),format='ascii',overwrite=True)
 
         end = time.time()
         print('Took',str(end-start))
@@ -261,8 +261,8 @@ def mp_get_w(bands):
 
 def main():
 	# Read in JH catalogue
-	file = str(sys.argv[1])
-	JH = Table.read(file,format='csv')
+	filen = str(sys.argv[1])
+	JH = Table.read(filen,format='csv')
 	# Matching radius (arcsecs)
 	mr = 2.0
 	# Option to just look at core of region
