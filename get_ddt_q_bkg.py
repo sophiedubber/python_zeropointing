@@ -14,13 +14,13 @@ from make_jh_sav import cat_match
 from itertools import zip_longest
 Vizier.ROW_LIMIT = 99999
 # - - - - - - - - 
-# Input Files:
+# Input Files: arg[1],arg[2],arg[3]
 # - SerpensSouth_ALL-PHOT.csv
 # - SerpensSouth_W-PHOT
 # - serpenssouth_sexcat_w.fits
 
-# Output Files:
-# - SerpensSouth_WJH.csv
+# Output Files: arg[4]
+# - SerpensSouth_WJH.dat
 # - - - - - - - - 
 
 # - - - - -  F U N C T I O N S - - - - -
@@ -91,7 +91,7 @@ def find_zeropoint(phottab,wphottab,w):
 	spt = Column(np.around(np.array(wphottab['spt'][syn_ind[flagtest]]),2),name='SPT')
 	sptst = Column(np.array(spt_str)[syn_ind[flagtest]],name='SPT_STR')
 	final_tab.add_columns([ra,dec,w,we,j,je,h,he,av,spt,sptst])
-	final_tab.write('SerpensSouth_WJHpy_spt.dat',format='ascii',overwrite=True)
+	final_tab.write(str(sys.argv[4]),format='ascii',overwrite=True)
 
 	return final_tab
 
@@ -146,10 +146,15 @@ def main():
 	file3 = str(sys.argv[3]) #....._sexcat_w
 	phottab = Table.read(file1,format='csv')
 	wphottab = Table.read(file2,format='ascii')
-	w = Table.read(file3,format='fits')
+
+	# Check file type of w cat
+	if '.sexcat' in file3:
+		w = Table.read(file3,hdu=2)
+	elif '.fits.' in file3:
+		w = Table.read(file3,format='fits')
 
 	tab = find_zeropoint(phottab,wphottab,w) 
-	spt_histogram(tab)
+	#spt_histogram(tab)
 	return tab 
 
-tab = main()
+#tab = main()
