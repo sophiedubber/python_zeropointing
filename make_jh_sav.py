@@ -13,12 +13,12 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 # - - - - - - - - -
-# Input files:
+# Input files: arg[1],arg[2]
 # - J: serpsensouth_sexcat_j.fits
 # - H: serpenssouth_sexcat_h.fits
 
-# Output files: 
-# - serpenssouth_JH.sav
+# Output files: arg[3]
+# - SigmaOri_JH.csv
 # - - - - - - - - - 
 
 
@@ -88,7 +88,7 @@ def sav_tab(jm,hm,jzpoff,hzpoff,jzpstd,hzpstd):
 
 	sav_dict = {'rd':rd,'dd':dd,'jm':jmag,'jme':jmage,'hm':hmag,'hme':hmage,'js':js,'hs':hs}
 	df = pd.DataFrame(sav_dict,columns=['rd','dd','jm','jme','hm','hme','js','hs'])
-	df.to_csv('SigmaOri_JH.csv')
+	df.to_csv(str(sys.argv[3]))
 
 	return
 
@@ -132,5 +132,5 @@ def main():
 
 	return 
 
-#main()
+main()
 
